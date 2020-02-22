@@ -23,6 +23,7 @@ DOMAIN = "google_assistant"
 GOOGLE_ASSISTANT_API_ENDPOINT = "/api/google_assistant"
 
 CONF_EXPOSE = "expose"
+CONF_EXPOSE_USERS = "expose_users"
 CONF_ENTITY_CONFIG = "entity_config"
 CONF_EXPOSE_BY_DEFAULT = "expose_by_default"
 CONF_EXPOSED_DOMAINS = "exposed_domains"

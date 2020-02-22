@@ -19,6 +19,7 @@ from .const import (
     CONF_CLIENT_EMAIL,
     CONF_ENTITY_CONFIG,
     CONF_EXPOSE,
+    CONF_EXPOSE_USERS,
     CONF_EXPOSE_BY_DEFAULT,
     CONF_EXPOSED_DOMAINS,
     CONF_PRIVATE_KEY,
@@ -97,7 +98,7 @@ class GoogleConfig(AbstractConfig):
         """Return if states should be proactively reported."""
         return self._config.get(CONF_REPORT_STATE)
 
-    def should_expose(self, state) -> bool:
+    def should_expose(self, state, user_id) -> bool:
         """Return if entity should be exposed."""
         expose_by_default = self._config.get(CONF_EXPOSE_BY_DEFAULT)
         exposed_domains = self._config.get(CONF_EXPOSED_DOMAINS)
@@ -110,6 +111,8 @@ class GoogleConfig(AbstractConfig):
             return False
 
         explicit_expose = self.entity_config.get(state.entity_id, {}).get(CONF_EXPOSE)
+        expose_users = self.entity_config.get(state.entity_id, {}).get(CONF_EXPOSE_USERS)
+        explicit_expose_for_user = expose_users is not None and user_id in expose_users
 
         domain_exposed_by_default = (
             expose_by_default and state.domain in exposed_domains
@@ -120,7 +123,7 @@ class GoogleConfig(AbstractConfig):
         # exposed, or if the entity is explicitly exposed
         is_default_exposed = domain_exposed_by_default and explicit_expose is not False
 
-        return is_default_exposed or explicit_expose
+        return is_default_exposed or explicit_expose or explicit_expose_for_user
 
     def get_agent_user_id(self, context):
         """Get agent user ID making request."""

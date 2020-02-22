@@ -16,6 +16,7 @@ from .const import (
     CONF_CLIENT_EMAIL,
     CONF_ENTITY_CONFIG,
     CONF_EXPOSE,
+    CONF_EXPOSE_USERS,
     CONF_EXPOSE_BY_DEFAULT,
     CONF_EXPOSED_DOMAINS,
     CONF_PRIVATE_KEY,
@@ -42,6 +43,7 @@ ENTITY_SCHEMA = vol.Schema(
         vol.Optional(CONF_EXPOSE): cv.boolean,
         vol.Optional(CONF_ALIASES): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional(CONF_ROOM_HINT): cv.string,
+        vol.Optional(CONF_EXPOSE_USERS): vol.All(cv.ensure_list, [cv.string]),
     }
 )
 

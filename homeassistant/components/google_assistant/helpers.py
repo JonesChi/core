@@ -103,7 +103,7 @@ class AbstractConfig(ABC):
         """Get agent user ID from context."""
 
     @abstractmethod
-    def should_expose(self, state) -> bool:
+    def should_expose(self, state, user_id) -> bool:
         """Return if entity should be exposed."""
 
     def should_2fa(self, state):
@@ -348,15 +348,15 @@ class GoogleEntity:
         return self._traits
 
     @callback
-    def should_expose(self):
+    def should_expose(self, user_id):
         """If entity should be exposed."""
-        return self.config.should_expose(self.state)
+        return self.config.should_expose(self.state, user_id)
 
     @callback
     def should_expose_local(self) -> bool:
         """Return if the entity should be exposed locally."""
         return (
-            self.should_expose()
+            self.should_expose(None)
             and get_google_type(
                 self.state.domain, self.state.attributes.get(ATTR_DEVICE_CLASS)
             )

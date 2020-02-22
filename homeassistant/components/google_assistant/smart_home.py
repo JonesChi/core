@@ -88,7 +88,7 @@ async def async_devices_sync(hass, data, payload):
         *(
             entity.sync_serialize(agent_user_id)
             for entity in async_get_entities(hass, data.config)
-            if entity.should_expose()
+            if entity.should_expose(agent_user_id)
         )
     )
 
