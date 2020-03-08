@@ -98,6 +98,15 @@ class GoogleConfig(AbstractConfig):
         """Return if states should be proactively reported."""
         return self._config.get(CONF_REPORT_STATE)
 
+    @property
+    def local_sdk_webhook_id(self):
+        return self._store.local_webhook_id
+
+    @property
+    def local_sdk_user_id(self):
+        """Return first user id."""
+        return [*self._store.agent_user_ids][-1]
+
     async def get_user_name(self, user_id):
         user = await self.hass.auth.async_get_user(user_id)
         return user.name
