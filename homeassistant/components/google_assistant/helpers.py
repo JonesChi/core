@@ -31,6 +31,7 @@ from .const import (
     NOT_EXPOSE_LOCAL,
     SOURCE_LOCAL,
     STORE_AGENT_USER_IDS,
+    STORE_LOCAL_WEBHOOK_ID,
 )
 from .error import SmartHomeError
 
@@ -262,6 +263,11 @@ class GoogleConfigStore:
         """Return a list of connected agent user_ids."""
         return self._data[STORE_AGENT_USER_IDS]
 
+    @property
+    def local_webhook_id(self):
+        """Return the webhook id for local sdk."""
+        return self._data[STORE_LOCAL_WEBHOOK_ID]
+
     @callback
     def add_agent_user_id(self, agent_user_id):
         """Add an agent user id to store."""
@@ -282,6 +288,9 @@ class GoogleConfigStore:
         if data:
             self._data = data
 
+        if STORE_LOCAL_WEBHOOK_ID not in self._data:
+            self._data[STORE_LOCAL_WEBHOOK_ID] = self._hass.homeassistant/components.webhook.async_generate_id()
+            await self._store.async_save(self._data)
 
 class RequestData:
     """Hold data associated with a particular request."""
@@ -418,8 +427,8 @@ class GoogleEntity:
             device["otherDeviceIds"] = [{"deviceId": self.entity_id}]
             device["customData"] = {
                 "webhookId": self.config.local_sdk_webhook_id,
-                "httpPort": self.hass.config.api.port,
-                "httpSSL": self.hass.config.api.use_ssl,
+                "httpPort": self.hass.config.api.non_ssl_port if self.hass.config.api.use_ssl else self.hass.config.api.port,
+                "httpSSL": False,
                 "proxyDeviceId": agent_user_id,
             }
 
