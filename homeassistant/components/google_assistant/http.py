@@ -98,6 +98,10 @@ class GoogleConfig(AbstractConfig):
         """Return if states should be proactively reported."""
         return self._config.get(CONF_REPORT_STATE)
 
+    async def get_user_name(self, user_id):
+        user = await self.hass.auth.async_get_user(user_id)
+        return user.name
+
     def should_expose(self, state, user_id) -> bool:
         """Return if entity should be exposed."""
         expose_by_default = self._config.get(CONF_EXPOSE_BY_DEFAULT)
@@ -111,8 +115,15 @@ class GoogleConfig(AbstractConfig):
             return False
 
         explicit_expose = self.entity_config.get(state.entity_id, {}).get(CONF_EXPOSE)
-        expose_users = self.entity_config.get(state.entity_id, {}).get(CONF_EXPOSE_USERS)
-        explicit_expose_for_user = expose_users is not None and user_id in expose_users
+        explicit_expose_for_user = False
+        if user_id:
+            user = None
+            try:
+                self.get_user_name(user_id).send(None)
+            except StopIteration as e:
+                user = e.value
+            expose_users = self.entity_config.get(state.entity_id, {}).get(CONF_EXPOSE_USERS)
+            explicit_expose_for_user = expose_users is not None and (user in expose_users or user_id in expose_users)
 
         domain_exposed_by_default = (
             expose_by_default and state.domain in exposed_domains
