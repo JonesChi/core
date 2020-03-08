@@ -35,6 +35,7 @@ DOMAIN = "http"
 
 CONF_SERVER_HOST = "server_host"
 CONF_SERVER_PORT = "server_port"
+CONF_NON_SSL_SERVER_PORT = "non_ssl_server_port"
 CONF_BASE_URL = "base_url"
 CONF_SSL_CERTIFICATE = "ssl_certificate"
 CONF_SSL_PEER_CERTIFICATE = "ssl_peer_certificate"
@@ -67,6 +68,7 @@ HTTP_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_SERVER_HOST, default=DEFAULT_SERVER_HOST): cv.string,
         vol.Optional(CONF_SERVER_PORT, default=SERVER_PORT): cv.port,
+        vol.Optional(CONF_NON_SSL_SERVER_PORT): cv.port,
         vol.Optional(CONF_BASE_URL): cv.string,
         vol.Optional(CONF_SSL_CERTIFICATE): cv.isfile,
         vol.Optional(CONF_SSL_PEER_CERTIFICATE): cv.isfile,
@@ -102,11 +104,12 @@ class ApiConfig:
     """Configuration settings for API server."""
 
     def __init__(
-        self, host: str, port: Optional[int] = SERVER_PORT, use_ssl: bool = False
+        self, host: str, port: Optional[int] = SERVER_PORT, non_ssl_port: Optional[int] = None, use_ssl: bool = False
     ) -> None:
         """Initialize a new API config object."""
         self.host = host
         self.port = port
+        self.non_ssl_port = non_ssl_port
         self.use_ssl = use_ssl
 
         host = host.rstrip("/")
@@ -130,6 +133,7 @@ async def async_setup(hass, config):
 
     server_host = conf[CONF_SERVER_HOST]
     server_port = conf[CONF_SERVER_PORT]
+    non_ssl_server_port = conf[CONF_NON_SSL_SERVER_PORT]
     ssl_certificate = conf.get(CONF_SSL_CERTIFICATE)
     ssl_peer_certificate = conf.get(CONF_SSL_PEER_CERTIFICATE)
     ssl_key = conf.get(CONF_SSL_KEY)
@@ -144,6 +148,7 @@ async def async_setup(hass, config):
         hass,
         server_host=server_host,
         server_port=server_port,
+        non_ssl_server_port=non_ssl_server_port,
         ssl_certificate=ssl_certificate,
         ssl_peer_certificate=ssl_peer_certificate,
         ssl_key=ssl_key,
@@ -192,7 +197,7 @@ async def async_setup(hass, config):
         host = hass_util.get_local_ip()
         port = server_port
 
-    hass.config.api = ApiConfig(host, port, ssl_certificate is not None)
+    hass.config.api = ApiConfig(host, port, non_ssl_server_port, ssl_certificate is not None)
 
     return True
 
@@ -208,6 +213,7 @@ class HomeAssistantHTTP:
         ssl_key,
         server_host,
         server_port,
+        non_ssl_server_port,
         cors_origins,
         use_x_forwarded_for,
         trusted_proxies,
@@ -237,12 +243,14 @@ class HomeAssistantHTTP:
         self.ssl_key = ssl_key
         self.server_host = server_host
         self.server_port = server_port
+        self.non_ssl_server_port = non_ssl_server_port
         self.trusted_proxies = trusted_proxies
         self.is_ban_enabled = is_ban_enabled
         self.ssl_profile = ssl_profile
         self._handler = None
         self.runner = None
         self.site = None
+        self.non_ssl_site = None
 
     def register_view(self, view):
         """Register a view with the WSGI server.
@@ -352,7 +360,20 @@ class HomeAssistantHTTP:
                 "Failed to create HTTP server at port %d: %s", self.server_port, error
             )
 
+        if context and self.non_ssl_server_port:
+            self.non_ssl_site = web.TCPSite(
+                self.runner, self.server_host, self.non_ssl_server_port, ssl_context=None
+            )
+            try:
+                await self.non_ssl_site.start()
+            except OSError as error:
+                _LOGGER.error(
+                    "Failed to create HTTP server at port %d: %s", self.non_ssl_server_port, error
+                )
+
     async def stop(self):
         """Stop the aiohttp server."""
         await self.site.stop()
+        if self.non_ssl_site:
+            await self.non_ssl_site.stop()
         await self.runner.cleanup()
